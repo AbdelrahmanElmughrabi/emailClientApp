@@ -7,6 +7,7 @@ import javafx.scene.control.ChoiceBox;
 import javafx.stage.Stage;
 import model.HostConfiguration;
 import service.EmailService;
+import service.HostConfigManager;
 
 /**
  * Controller for host configuration window
@@ -35,6 +36,7 @@ public class HostConfigController {
     private PasswordField passwordField;
 
     private EmailService emailService;
+    private HostConfigManager hostConfigManager;
     private Stage stage;
 
     @FXML
@@ -51,7 +53,8 @@ public class HostConfigController {
     @FXML
     private void handleSave() {
         // TODO: Create HostConfiguration from fields
-        // TODO: Save to emailService
+        // TODO: Call hostConfigManager.addHost(config)
+        // TODO: Call hostConfigManager.setCurrentHost(config)
         stage.close();
     }
 
@@ -67,6 +70,10 @@ public class HostConfigController {
 
     public void setEmailService(EmailService emailService) {
         this.emailService = emailService;
+    }
+
+    public void setHostConfigManager(HostConfigManager hostConfigManager) {
+        this.hostConfigManager = hostConfigManager;
     }
 
     public void setStage(Stage stage) {
