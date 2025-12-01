@@ -1,8 +1,8 @@
 package service;
 
+import java.util.List;
 import model.EmailMessage;
 import model.HostConfiguration;
-import java.util.List;
 
 
 public class EmailService {
@@ -20,13 +20,13 @@ public class EmailService {
     }
 
     // Send email
-    public void sendEmail(EmailMessage message) throws Exception {
-        // Will use: Properties, Session, MimeMessage, Transport
+    public void sendEmail(EmailMessage message, HostConfiguration config) throws Exception {
+        // TODO: Properties, Session, MimeMessage, Transport
     }
 
-    // Receive emails
-    public List<EmailMessage> receiveEmails() throws Exception {
-        // Will use: Properties, Session, Store, Folder
+    // Receive emails from specific folder
+    public List<EmailMessage> receiveEmails(String folderName, HostConfiguration config) throws Exception {
+        // TODO: Properties, Session, Store, Folder
         return null;
     }
 

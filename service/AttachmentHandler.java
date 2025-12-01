@@ -1,6 +1,7 @@
 package service;
 
 import java.io.File;
+import javax.mail.internet.MimeBodyPart;
 
 
 public class AttachmentHandler {
@@ -8,14 +9,16 @@ public class AttachmentHandler {
     public AttachmentHandler() {
     }
 
-    // Add attachment using MimeBodyPart
-    public void addAttachment(File file) throws Exception {
-        // Will use: MimeBodyPart, FileDataSource
+    // Create attachment part (used BY EmailService when sending)
+    public MimeBodyPart createAttachmentPart(File file) throws Exception {
+        // TODO: MimeBodyPart, FileDataSource
+        return null;
     }
 
-   //Save attachment from email
-    public void saveAttachment(String attachmentName, String destinationPath) throws Exception {
-        // Will use: Part.saveFile()
+    // Save attachment from email (receives MimeBodyPart FROM EmailService)
+    public File saveAttachment(MimeBodyPart part, String destinationFolder) throws Exception {
+        // TODO: part.saveFile() or part.getInputStream()
+        return null;
     }
 
     // Helper: Get file size
