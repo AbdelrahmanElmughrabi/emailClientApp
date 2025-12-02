@@ -1,10 +1,13 @@
 package model;
 
+import java.io.Serializable;
+
 /**
  * Data model for email server host configuration
  * Stores SMTP and IMAP/POP3 server settings
  */
-public class HostConfiguration {
+public class HostConfiguration implements Serializable {
+    private static final long serialVersionUID = 1L;
     private String receiveProtocol;  // "imap" or "pop3"
     private String receiveHost;
     private int receivePort;         // 993 for IMAP, 995 for POP3

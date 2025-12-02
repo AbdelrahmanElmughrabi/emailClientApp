@@ -1,12 +1,10 @@
 package service;
 
 import model.HostConfiguration;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Save/load multiple email account configurations
- */
 public class HostConfigManager {
     private List<HostConfiguration> savedHosts;
     private HostConfiguration currentHost;
@@ -15,33 +13,45 @@ public class HostConfigManager {
         this.savedHosts = new ArrayList<>();
     }
 
-    // Add new host configuration
     public void addHost(HostConfiguration host) {
-        // TODO: Add to list, optionally save to file
+        if (!savedHosts.contains(host)) {
+            savedHosts.add(host);
+        }
     }
 
-    // Get all saved hosts
     public List<HostConfiguration> getAllHosts() {
         return savedHosts;
     }
 
-    // Get currently active host
     public HostConfiguration getCurrentHost() {
         return currentHost;
     }
 
-    // Set current active host
     public void setCurrentHost(HostConfiguration host) {
         this.currentHost = host;
+        if (!savedHosts.contains(host)) {
+            savedHosts.add(host);
+        }
     }
 
-    // Optional: Save to file
     public void saveToFile(String filepath) throws Exception {
-        // TODO: Serialize to properties file or JSON
+        try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(filepath))) {
+            out.writeObject(savedHosts);
+        }
     }
 
-    // Optional: Load from file
+    @SuppressWarnings("unchecked")
     public void loadFromFile(String filepath) throws Exception {
-        // TODO: Deserialize from file
+        File file = new File(filepath);
+        if (!file.exists()) {
+            return;
+        }
+
+        try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(filepath))) {
+            savedHosts = (List<HostConfiguration>) in.readObject();
+            if (!savedHosts.isEmpty()) {
+                currentHost = savedHosts.get(0);
+            }
+        }
     }
 }
