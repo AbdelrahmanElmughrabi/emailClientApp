@@ -16,6 +16,7 @@
             <Button text="Reply" onAction="#handleReply"/>
             <Button text="Delete" onAction="#handleDelete"/>
             <Button text="Settings" onAction="#handleSettings"/>
+            <ToggleButton fx:id="cachingToggle" text="Caching: OFF" onAction="#handleCachingToggle"/>
         </ToolBar>
     </top>
 

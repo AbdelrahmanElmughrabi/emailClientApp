@@ -34,7 +34,12 @@ public class FolderManager {
         for (Folder folder : folders) {
             // Only include folders that can hold messages
             if ((folder.getType() & Folder.HOLDS_MESSAGES) != 0) {
-                folderNames.add(folder.getFullName());
+                String name = folder.getFullName();
+                // Filter out "All Mail", "Important", "Starred" to reduce clutter
+                if (name.contains("All Mail") || name.contains("Important") || name.contains("Starred")) {
+                    continue;
+                }
+                folderNames.add(name);
             }
         }
 

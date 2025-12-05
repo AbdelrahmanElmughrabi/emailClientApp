@@ -11,6 +11,7 @@ import javafx.scene.control.SplitPane;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.ToggleButton;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.stage.Modality;
@@ -53,10 +54,13 @@ public class MainController {
     @FXML
     private TreeView<String> folderTree;  // For displaying folders
 
+    @FXML
+    private ToggleButton cachingToggle;
+
     private EmailService emailService;
     private FolderManager folderManager;
     private HostConfigManager hostConfigManager;
-    private final EmailCacheService cacheService = new EmailCacheService();
+    private final EmailCacheService emailCacheService = new EmailCacheService();
 
     private final ObservableList<EmailMessage> emailData = FXCollections.observableArrayList();
     private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
@@ -140,7 +144,46 @@ public class MainController {
         } else {
             dateLabel.setText("");
         }
-        emailBodyArea.setText(email.getBody() != null ? email.getBody() : "");
+        
+        // Lazy Load Body
+        if (email.getBody() == null) {
+            emailBodyArea.setText("Loading content...");
+            
+            // Capture necessary data for thread
+            String messageId = email.getMessageId();
+            String folderName = email.getFolder();
+            HostConfiguration config = requireHostConfig();
+            
+            // Don't spawn thread if essential data is missing
+            if (messageId == null || folderName == null || config == null) {
+                 emailBodyArea.setText("Error: Missing message info.");
+                 return;
+            }
+
+            new Thread(() -> {
+                try {
+                    String body = emailService.fetchEmailBody(messageId, folderName, config);
+                    
+                    // Update UI and Cache in Memory
+                    Platform.runLater(() -> {
+                        // verify user hasn't clicked another email while we were loading
+                        EmailMessage currentSelection = emailTable.getSelectionModel().getSelectedItem();
+                        if (currentSelection != null && currentSelection.getMessageId().equals(messageId)) {
+                             email.setBody(body);
+                             emailBodyArea.setText(body);
+                        }
+                    });
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                    Platform.runLater(() -> {
+                        emailBodyArea.setText("Error loading body: " + ex.getMessage());
+                    });
+                }
+            }).start();
+        } else {
+            // Already loaded
+            emailBodyArea.setText(email.getBody());
+        }
     }
 
     private HostConfiguration requireHostConfig() {
@@ -186,11 +229,8 @@ public class MainController {
     }
 
     private void loadEmailsForFolder(String folderName) {
-        // Prevent concurrent loads
-        if (isLoadingEmails) {
-            System.out.println("Already loading emails, skipping request...");
-            return;
-        }
+        // Remove blocking check to allow folder switching.
+        // The 'lastRequestToken' mechanism handles concurrency by discarding stale results.
 
         HostConfiguration config = requireHostConfig();
         if (config == null) {
@@ -201,41 +241,42 @@ public class MainController {
         // Generate a new token for this specific request
         long currentToken = System.currentTimeMillis();
         lastRequestToken = currentToken;
+        boolean useCache = cachingToggle.isSelected();
 
-        // Show loading indicator
+        // IMMEDIATE UI FEEDBACK: Clear old data instantly
         Platform.runLater(() -> {
             emailData.clear();
             clearEmailDetails();
-            subjectLabel.setText("Loading...");
+            subjectLabel.setText("Loading " + folderName + "...");
         });
 
         new Thread(() -> {
             try {
-                // 1. Load from Cache (Instant)
-                List<EmailMessage> cachedMessages = cacheService.loadEmails(folderName);
-                
-                // Check if token is still valid before updating UI
-                if (lastRequestToken == currentToken && cachedMessages != null && !cachedMessages.isEmpty()) {
-                    Platform.runLater(() -> {
-                        if (lastRequestToken == currentToken) {
-                            emailData.setAll(cachedMessages);
-                            subjectLabel.setText("Checking for new emails...");
-                        }
-                    });
+                if (useCache) {
+                    List<EmailMessage> cachedMessages = emailCacheService.loadEmails(folderName);
+                    if (!cachedMessages.isEmpty()) {
+                        Platform.runLater(() -> {
+                            if (lastRequestToken == currentToken) {
+                                emailData.setAll(cachedMessages);
+                                subjectLabel.setText(""); // Clear loading text
+                            }
+                        });
+                    }
                 }
 
-                // 2. Fetch from Server (Network)
+                // Fetch from Server (Network) - Now fast because we skip bodies!
                 List<EmailMessage> freshMessages = emailService.receiveEmails(folderName, config);
 
-                // 3. Update UI and Cache - ONLY if this is still the latest request
+                if (useCache) {
+                    emailCacheService.saveEmails(folderName, freshMessages);
+                }
+
+                // Update UI - ONLY if this is still the latest request
                 Platform.runLater(() -> {
                     if (lastRequestToken == currentToken) {
                         emailData.setAll(freshMessages);
                         clearEmailDetails();
                         subjectLabel.setText("");
-                        
-                        // Save fresh data to cache
-                        new Thread(() -> cacheService.saveEmails(folderName, freshMessages)).start();
                     } else {
                         System.out.println("Discarding stale email data (newer request exists)");
                     }
@@ -245,14 +286,8 @@ public class MainController {
                 ex.printStackTrace();
                 Platform.runLater(() -> {
                     if (lastRequestToken == currentToken) {
-                        // If we successfully loaded cache, just warn about the network error
-                        if (!emailData.isEmpty()) {
-                             subjectLabel.setText("Offline (Showing cached)");
-                             System.err.println("Network error while refreshing: " + ex.getMessage());
-                        } else {
-                            showError("Error loading emails", ex.getMessage());
-                            subjectLabel.setText("");
-                        }
+                        showError("Error loading emails", ex.getMessage());
+                        subjectLabel.setText("");
                     }
                 });
             } finally {
@@ -265,6 +300,11 @@ public class MainController {
 
     @FXML
     private void handleRefresh() {
+        if (isLoadingEmails) {
+            // Debounce: Do not allow refreshing if already loading
+            return;
+        }
+        
         // Refresh currently selected folder; default to INBOX
         TreeItem<String> selected = folderTree.getSelectionModel().getSelectedItem();
         String folderName = "INBOX";
@@ -347,17 +387,23 @@ public class MainController {
             return;
         }
 
-        try {
-            // Delete from server
-            emailService.deleteEmail(selected, config);
-            // Remove from UI
-            emailData.remove(selected);
-            // Refresh to sync with server
-            handleRefresh();
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            showError("Error deleting email", ex.getMessage());
-        }
+        // Optimistic Update: Remove from UI immediately
+        int selectedIndex = emailTable.getSelectionModel().getSelectedIndex();
+        emailData.remove(selected);
+
+        // Run network operation in background
+        new Thread(() -> {
+            try {
+                emailService.deleteEmail(selected, config);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                // If failed, restore the email to UI
+                Platform.runLater(() -> {
+                    emailData.add(selectedIndex, selected);
+                    showError("Error deleting email", "Failed to delete from server. Restoring email.\n" + ex.getMessage());
+                });
+            }
+        }).start();
     }
 
     @FXML
@@ -390,6 +436,15 @@ public class MainController {
         } catch (IOException ex) {
             ex.printStackTrace();
             showError("Error opening settings", ex.getMessage());
+        }
+    }
+
+    @FXML
+    private void handleCachingToggle() {
+        if (cachingToggle.isSelected()) {
+            cachingToggle.setText("Caching: ON");
+        } else {
+            cachingToggle.setText("Caching: OFF");
         }
     }
 

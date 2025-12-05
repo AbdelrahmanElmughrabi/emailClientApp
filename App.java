@@ -1,3 +1,4 @@
+
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -23,7 +24,6 @@ public class App extends Application {
         EmailService emailService = new EmailService();
         FolderManager folderManager = new FolderManager();
         HostConfigManager hostConfigManager = new HostConfigManager();
-
 
         try {
             hostConfigManager.loadFromFile("host_config.dat");
@@ -54,4 +54,3 @@ public class App extends Application {
         launch(args);
     }
 }
-

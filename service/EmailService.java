@@ -119,7 +119,8 @@ public class EmailService {
             }
 
             email.setSubject(msg.getSubject());
-            email.setBody(getTextFromMessage(msg));
+            // Lazy Loading: Do NOT fetch body here. It is slow.
+            // email.setBody(getTextFromMessage(msg));
 
             Date sentDate = msg.getSentDate();
             if (sentDate != null) {
@@ -173,6 +174,37 @@ public class EmailService {
         return result.toString();
     }
 
+    public String fetchEmailBody(String messageId, String folderName, HostConfiguration config) throws Exception {
+        // Configure mail store properties
+        Properties props = new Properties();
+        props.put("mail.store.protocol", config.getReceiveProtocol());
+        props.put("mail." + config.getReceiveProtocol() + ".host", config.getReceiveHost());
+        props.put("mail." + config.getReceiveProtocol() + ".port", config.getReceivePort());
+        props.put("mail." + config.getReceiveProtocol() + ".ssl.enable", "true");
+
+        // Connect to mail store
+        Session session = Session.getInstance(props);
+        Store store = session.getStore(config.getReceiveProtocol());
+        store.connect(config.getReceiveHost(), config.getUsername(), config.getPassword());
+
+        // Open folder
+        Folder folder = store.getFolder(folderName);
+        folder.open(Folder.READ_ONLY);
+
+        // Efficiently search for the message by ID
+        javax.mail.search.SearchTerm searchTerm = new javax.mail.search.HeaderTerm("Message-ID", messageId);
+        Message[] foundMessages = folder.search(searchTerm);
+
+        String body = "Error: Could not find email content.";
+        if (foundMessages != null && foundMessages.length > 0) {
+            body = getTextFromMessage(foundMessages[0]);
+        }
+
+        folder.close(false);
+        store.close();
+        return body;
+    }
+
     public void markAsRead(EmailMessage message) throws Exception {
         // TODO: Implementation needed
     }
@@ -198,17 +230,17 @@ public class EmailService {
         Folder folder = store.getFolder(message.getFolder());
         folder.open(Folder.READ_WRITE);
 
-        // Find the message by Message-ID header
-        Message[] messages = folder.getMessages();
-        for (Message msg : messages) {
-            String[] messageIdHeaders = msg.getHeader("Message-ID");
-            if (messageIdHeaders != null && messageIdHeaders.length > 0) {
-                if (messageIdHeaders[0].equals(message.getMessageId())) {
-                    // Mark message as deleted
-                    msg.setFlag(Flags.Flag.DELETED, true);
-                    break;
-                }
+        // Use SearchTerm to find the message efficiently
+        javax.mail.search.SearchTerm searchTerm = new javax.mail.search.HeaderTerm("Message-ID", message.getMessageId());
+        Message[] foundMessages = folder.search(searchTerm);
+
+        if (foundMessages != null && foundMessages.length > 0) {
+            // Delete all matches (should be unique)
+            for (Message msg : foundMessages) {
+                msg.setFlag(Flags.Flag.DELETED, true);
             }
+        } else {
+            System.out.println("Warning: Could not find email to delete with ID: " + message.getMessageId());
         }
 
         // Close folder with expunge=true to permanently delete
