@@ -24,7 +24,7 @@ public class App extends Application {
         FolderManager folderManager = new FolderManager();
         HostConfigManager hostConfigManager = new HostConfigManager();
 
-        // Try to load saved host configurations (optional)
+
         try {
             hostConfigManager.loadFromFile("host_config.dat");
             if (hostConfigManager.getCurrentHost() != null) {

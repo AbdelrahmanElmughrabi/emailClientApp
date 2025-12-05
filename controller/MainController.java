@@ -61,6 +61,7 @@ public class MainController {
     private final ObservableList<EmailMessage> emailData = FXCollections.observableArrayList();
     private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private volatile boolean isLoadingEmails = false;
+    private volatile long lastRequestToken = 0;
 
     @FXML
     public void initialize() {
@@ -197,6 +198,9 @@ public class MainController {
         }
 
         isLoadingEmails = true;
+        // Generate a new token for this specific request
+        long currentToken = System.currentTimeMillis();
+        lastRequestToken = currentToken;
 
         // Show loading indicator
         Platform.runLater(() -> {
@@ -209,40 +213,52 @@ public class MainController {
             try {
                 // 1. Load from Cache (Instant)
                 List<EmailMessage> cachedMessages = cacheService.loadEmails(folderName);
-                if (cachedMessages != null && !cachedMessages.isEmpty()) {
+                
+                // Check if token is still valid before updating UI
+                if (lastRequestToken == currentToken && cachedMessages != null && !cachedMessages.isEmpty()) {
                     Platform.runLater(() -> {
-                        emailData.setAll(cachedMessages);
-                        subjectLabel.setText("Checking for new emails...");
+                        if (lastRequestToken == currentToken) {
+                            emailData.setAll(cachedMessages);
+                            subjectLabel.setText("Checking for new emails...");
+                        }
                     });
                 }
 
                 // 2. Fetch from Server (Network)
                 List<EmailMessage> freshMessages = emailService.receiveEmails(folderName, config);
 
-                // 3. Update UI and Cache
+                // 3. Update UI and Cache - ONLY if this is still the latest request
                 Platform.runLater(() -> {
-                    emailData.setAll(freshMessages);
-                    clearEmailDetails();
-                    subjectLabel.setText("");
+                    if (lastRequestToken == currentToken) {
+                        emailData.setAll(freshMessages);
+                        clearEmailDetails();
+                        subjectLabel.setText("");
+                        
+                        // Save fresh data to cache
+                        new Thread(() -> cacheService.saveEmails(folderName, freshMessages)).start();
+                    } else {
+                        System.out.println("Discarding stale email data (newer request exists)");
+                    }
                 });
-
-                // Save fresh data to cache
-                cacheService.saveEmails(folderName, freshMessages);
 
             } catch (Exception ex) {
                 ex.printStackTrace();
                 Platform.runLater(() -> {
-                    // If we successfully loaded cache, just warn about the network error
-                    if (!emailData.isEmpty()) {
-                         subjectLabel.setText("Offline (Showing cached)");
-                         System.err.println("Network error while refreshing: " + ex.getMessage());
-                    } else {
-                        showError("Error loading emails", ex.getMessage());
-                        subjectLabel.setText("");
+                    if (lastRequestToken == currentToken) {
+                        // If we successfully loaded cache, just warn about the network error
+                        if (!emailData.isEmpty()) {
+                             subjectLabel.setText("Offline (Showing cached)");
+                             System.err.println("Network error while refreshing: " + ex.getMessage());
+                        } else {
+                            showError("Error loading emails", ex.getMessage());
+                            subjectLabel.setText("");
+                        }
                     }
                 });
             } finally {
-                isLoadingEmails = false;
+                if (lastRequestToken == currentToken) {
+                    isLoadingEmails = false;
+                }
             }
         }).start();
     }

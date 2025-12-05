@@ -1,11 +1,12 @@
 package service;
 
-import model.HostConfiguration;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+import model.HostConfiguration;
 
 public class HostConfigManager {
+
     private List<HostConfiguration> savedHosts;
     private HostConfiguration currentHost;
 

@@ -108,9 +108,6 @@ public class EmailService {
 
         // Convert JavaMail messages to EmailMessage objects
         for (Message msg : messages) {
-            // DEBUG: Print flags for investigation
-            // System.out.println("Msg Subject: " + msg.getSubject() + " | Flags: " + java.util.Arrays.toString(msg.getFlags().getSystemFlags()) + " | UserFlags: " + java.util.Arrays.toString(msg.getFlags().getUserFlags()));
-
             if (msg.isSet(Flags.Flag.DELETED)) {
                 continue;
             }
