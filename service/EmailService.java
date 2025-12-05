@@ -13,6 +13,7 @@ import model.EmailMessage;
 import model.HostConfiguration;
 
 public class EmailService {
+
     private HostConfiguration hostConfig;
     private AttachmentHandler attachmentHandler;
 
@@ -94,11 +95,11 @@ public class EmailService {
         Folder folder = store.getFolder(folderName);
         folder.open(Folder.READ_ONLY);
 
-        // Fetch only last 100 messages for performance
+        // Fetch only last 20 messages for performance
         int messageCount = folder.getMessageCount();
         Message[] messages;
-        if (messageCount > 100) {
-            messages = folder.getMessages(messageCount - 99, messageCount);
+        if (messageCount > 20) {
+            messages = folder.getMessages(messageCount - 19, messageCount);
         } else {
             messages = folder.getMessages();
         }
@@ -107,6 +108,12 @@ public class EmailService {
 
         // Convert JavaMail messages to EmailMessage objects
         for (Message msg : messages) {
+            // DEBUG: Print flags for investigation
+            // System.out.println("Msg Subject: " + msg.getSubject() + " | Flags: " + java.util.Arrays.toString(msg.getFlags().getSystemFlags()) + " | UserFlags: " + java.util.Arrays.toString(msg.getFlags().getUserFlags()));
+
+            if (msg.isSet(Flags.Flag.DELETED)) {
+                continue;
+            }
             EmailMessage email = new EmailMessage();
 
             Address[] fromAddresses = msg.getFrom();

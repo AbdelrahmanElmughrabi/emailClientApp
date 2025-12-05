@@ -24,6 +24,7 @@ import model.HostConfiguration;
 import service.EmailService;
 import service.FolderManager;
 import service.HostConfigManager;
+import service.EmailCacheService;
 
 import java.io.IOException;
 import java.time.format.DateTimeFormatter;
@@ -55,6 +56,7 @@ public class MainController {
     private EmailService emailService;
     private FolderManager folderManager;
     private HostConfigManager hostConfigManager;
+    private final EmailCacheService cacheService = new EmailCacheService();
 
     private final ObservableList<EmailMessage> emailData = FXCollections.observableArrayList();
     private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
@@ -200,22 +202,44 @@ public class MainController {
         Platform.runLater(() -> {
             emailData.clear();
             clearEmailDetails();
-            subjectLabel.setText("Loading emails...");
+            subjectLabel.setText("Loading...");
         });
 
         new Thread(() -> {
             try {
-                List<EmailMessage> messages = emailService.receiveEmails(folderName, config);
+                // 1. Load from Cache (Instant)
+                List<EmailMessage> cachedMessages = cacheService.loadEmails(folderName);
+                if (cachedMessages != null && !cachedMessages.isEmpty()) {
+                    Platform.runLater(() -> {
+                        emailData.setAll(cachedMessages);
+                        subjectLabel.setText("Checking for new emails...");
+                    });
+                }
+
+                // 2. Fetch from Server (Network)
+                List<EmailMessage> freshMessages = emailService.receiveEmails(folderName, config);
+
+                // 3. Update UI and Cache
                 Platform.runLater(() -> {
-                    emailData.setAll(messages);
+                    emailData.setAll(freshMessages);
                     clearEmailDetails();
                     subjectLabel.setText("");
                 });
+
+                // Save fresh data to cache
+                cacheService.saveEmails(folderName, freshMessages);
+
             } catch (Exception ex) {
                 ex.printStackTrace();
                 Platform.runLater(() -> {
-                    showError("Error loading emails", ex.getMessage());
-                    subjectLabel.setText("");
+                    // If we successfully loaded cache, just warn about the network error
+                    if (!emailData.isEmpty()) {
+                         subjectLabel.setText("Offline (Showing cached)");
+                         System.err.println("Network error while refreshing: " + ex.getMessage());
+                    } else {
+                        showError("Error loading emails", ex.getMessage());
+                        subjectLabel.setText("");
+                    }
                 });
             } finally {
                 isLoadingEmails = false;

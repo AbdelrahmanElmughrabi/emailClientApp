@@ -1,6 +1,7 @@
 package model;
 
 import java.io.File;
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -8,7 +9,9 @@ import java.util.List;
 /**
  * Data model for an email message
  */
-public class EmailMessage {
+public class EmailMessage implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private String from;
     private List<String> to;
     private String subject;
