@@ -9,9 +9,7 @@ import service.EmailService;
 import service.FolderManager;
 import service.HostConfigManager;
 
-/**
- * Main application entry point
- */
+//Main application entry point
 public class App extends Application {
 
     @Override

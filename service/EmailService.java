@@ -119,9 +119,7 @@ public class EmailService {
             }
 
             email.setSubject(msg.getSubject());
-            // Lazy Loading: Do NOT fetch body here. It is slow.
-            // email.setBody(getTextFromMessage(msg));
-
+            
             Date sentDate = msg.getSentDate();
             if (sentDate != null) {
                 email.setSentDate(LocalDateTime.ofInstant(sentDate.toInstant(), ZoneId.systemDefault()));
@@ -203,10 +201,6 @@ public class EmailService {
         folder.close(false);
         store.close();
         return body;
-    }
-
-    public void markAsRead(EmailMessage message) throws Exception {
-        // TODO: Implementation needed
     }
 
     public void deleteEmail(EmailMessage message, HostConfiguration config) throws Exception {

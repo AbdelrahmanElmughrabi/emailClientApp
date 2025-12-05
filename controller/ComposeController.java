@@ -18,9 +18,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-/**
- * Controller for compose email window
- */
+
+ // Controller for compose email window
 public class ComposeController {
 
     @FXML
@@ -153,10 +152,9 @@ public class ComposeController {
         this.stage = stage;
     }
 
-    /**
-     * Set up compose window for replying to an email
-     * Pre-fills To field with sender and Subject with "Re: original subject"
-     */
+     // Set up compose window for replying to an email
+     // Pre-fills To field with sender and Subject with "Re: original subject"
+     
     public void setReplyTo(EmailMessage originalEmail) {
         if (originalEmail != null) {
             toField.setText(originalEmail.getFrom());

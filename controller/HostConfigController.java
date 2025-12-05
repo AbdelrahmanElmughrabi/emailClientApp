@@ -10,11 +10,10 @@ import model.HostConfiguration;
 import service.EmailService;
 import service.HostConfigManager;
 
-import java.util.List;
 
-/**
- * Controller for host configuration window
- */
+
+//Controller for host configuration window
+
 public class HostConfigController {
 
     @FXML

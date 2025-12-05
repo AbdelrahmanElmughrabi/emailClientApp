@@ -51,8 +51,4 @@ public class FolderManager {
     public List<EmailMessage> getMessagesFromFolder(String folderName, HostConfiguration config) throws Exception {
         return emailService.receiveEmails(folderName, config);
     }
-
-    public void moveMessage(EmailMessage message, String targetFolder, HostConfiguration config) throws Exception {
-        // TODO: Implementation for moving messages
-    }
 }
