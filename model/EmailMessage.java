@@ -17,6 +17,7 @@ public class EmailMessage {
     private boolean isRead;
     private List<File> attachments;
     private String folder;
+    private String messageId;  // Unique identifier for the email
 
     public EmailMessage() {
         this.to = new ArrayList<>();
@@ -99,6 +100,14 @@ public class EmailMessage {
 
     public void setFolder(String folder) {
         this.folder = folder;
+    }
+
+    public String getMessageId() {
+        return messageId;
+    }
+
+    public void setMessageId(String messageId) {
+        this.messageId = messageId;
     }
 
     @Override

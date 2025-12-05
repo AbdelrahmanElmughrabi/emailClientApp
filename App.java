@@ -19,15 +19,27 @@ public class App extends Application {
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/resources/MainWindow.fxml"));
         Parent root = loader.load();
 
-        // Inject services into controller
-        MainController controller = loader.getController();
+        // Create services
         EmailService emailService = new EmailService();
         FolderManager folderManager = new FolderManager();
         HostConfigManager hostConfigManager = new HostConfigManager();
 
+        // Try to load saved host configurations (optional)
+        try {
+            hostConfigManager.loadFromFile("host_config.dat");
+            if (hostConfigManager.getCurrentHost() != null) {
+                emailService.setHostConfiguration(hostConfigManager.getCurrentHost());
+            }
+        } catch (Exception ex) {
+            // Ignore if file not found / corrupted, user can configure manually
+            ex.printStackTrace();
+        }
+
+        // Inject services into controller
+        MainController controller = loader.getController();
         controller.setEmailService(emailService);
         controller.setFolderManager(folderManager);
-        // Pass hostConfigManager if needed for switching hosts
+        controller.setHostConfigManager(hostConfigManager);
 
         // Setup scene
         Scene scene = new Scene(root, 1024, 768);
@@ -42,3 +54,4 @@ public class App extends Application {
         launch(args);
     }
 }
+

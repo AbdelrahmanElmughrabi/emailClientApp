@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="controller.ComposeController"
+      spacing="10.0">
+      
+    <padding>
+        <Insets top="10.0" right="10.0" bottom="10.0" left="10.0"/>
+    </padding>
+    <children>
+        <GridPane hgap="5.0" vgap="5.0">
+            <columnConstraints>
+                <ColumnConstraints percentWidth="15.0"/>
+                <ColumnConstraints percentWidth="85.0"/>
+            </columnConstraints>
+
+            <children>
+                <Label text="To:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                <TextField fx:id="toField" GridPane.rowIndex="0" GridPane.columnIndex="1"
+                           promptText="recipient1@example.com, recipient2@example.com"/>
+
+                <Label text="Subject:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                <TextField fx:id="subjectField" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+            </children>
+        </GridPane>
+
+        <Label text="Body:"/>
+        <TextArea fx:id="bodyArea" prefRowCount="10" wrapText="true" VBox.vgrow="ALWAYS"/>
+
+        <Label text="Attachments:"/>
+        <HBox spacing="5.0">
+            <Button text="Add..." onAction="#handleAddAttachment"/>
+            <Button text="Remove" onAction="#handleRemoveAttachment"/>
+        </HBox>
+        <ListView fx:id="attachmentList" prefHeight="100.0"/>
+
+        <HBox spacing="10.0" alignment="CENTER_RIGHT">
+            <Button text="Send" onAction="#handleSend"/>
+            <Button text="Cancel" onAction="#handleCancel"/>
+        </HBox>
+    </children>
+</VBox>

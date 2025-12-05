@@ -117,6 +117,12 @@ public class EmailService {
             email.setRead(msg.isSet(Flags.Flag.SEEN));
             email.setFolder(folderName);
 
+            // Store message ID for deletion
+            String[] messageIdHeaders = msg.getHeader("Message-ID");
+            if (messageIdHeaders != null && messageIdHeaders.length > 0) {
+                email.setMessageId(messageIdHeaders[0]);
+            }
+
             emailList.add(email);
         }
 
@@ -159,7 +165,42 @@ public class EmailService {
         // TODO: Implementation needed
     }
 
-    public void deleteEmail(EmailMessage message) throws Exception {
-        // TODO: Implementation needed
+    public void deleteEmail(EmailMessage message, HostConfiguration config) throws Exception {
+        if (message.getMessageId() == null) {
+            throw new Exception("Cannot delete email: Message ID is missing");
+        }
+
+        // Configure mail store properties
+        Properties props = new Properties();
+        props.put("mail.store.protocol", config.getReceiveProtocol());
+        props.put("mail." + config.getReceiveProtocol() + ".host", config.getReceiveHost());
+        props.put("mail." + config.getReceiveProtocol() + ".port", config.getReceivePort());
+        props.put("mail." + config.getReceiveProtocol() + ".ssl.enable", "true");
+
+        // Connect to mail store
+        Session session = Session.getInstance(props);
+        Store store = session.getStore(config.getReceiveProtocol());
+        store.connect(config.getReceiveHost(), config.getUsername(), config.getPassword());
+
+        // Open folder in READ_WRITE mode
+        Folder folder = store.getFolder(message.getFolder());
+        folder.open(Folder.READ_WRITE);
+
+        // Find the message by Message-ID header
+        Message[] messages = folder.getMessages();
+        for (Message msg : messages) {
+            String[] messageIdHeaders = msg.getHeader("Message-ID");
+            if (messageIdHeaders != null && messageIdHeaders.length > 0) {
+                if (messageIdHeaders[0].equals(message.getMessageId())) {
+                    // Mark message as deleted
+                    msg.setFlag(Flags.Flag.DELETED, true);
+                    break;
+                }
+            }
+        }
+
+        // Close folder with expunge=true to permanently delete
+        folder.close(true);
+        store.close();
     }
 }
