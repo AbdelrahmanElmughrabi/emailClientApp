@@ -28,11 +28,14 @@ public class FolderManager {
         store.connect(config.getReceiveHost(), config.getUsername(), config.getPassword());
 
         Folder defaultFolder = store.getDefaultFolder();
-        Folder[] folders = defaultFolder.list();
+        Folder[] folders = defaultFolder.list("*");
 
         List<String> folderNames = new ArrayList<>();
         for (Folder folder : folders) {
-            folderNames.add(folder.getName());
+            // Only include folders that can hold messages
+            if ((folder.getType() & Folder.HOLDS_MESSAGES) != 0) {
+                folderNames.add(folder.getFullName());
+            }
         }
 
         store.close();

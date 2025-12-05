@@ -94,7 +94,15 @@ public class EmailService {
         Folder folder = store.getFolder(folderName);
         folder.open(Folder.READ_ONLY);
 
-        Message[] messages = folder.getMessages();
+        // Fetch only last 100 messages for performance
+        int messageCount = folder.getMessageCount();
+        Message[] messages;
+        if (messageCount > 100) {
+            messages = folder.getMessages(messageCount - 99, messageCount);
+        } else {
+            messages = folder.getMessages();
+        }
+
         List<EmailMessage> emailList = new ArrayList<>();
 
         // Convert JavaMail messages to EmailMessage objects

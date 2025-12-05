@@ -58,6 +58,7 @@ public class MainController {
 
     private final ObservableList<EmailMessage> emailData = FXCollections.observableArrayList();
     private final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private volatile boolean isLoadingEmails = false;
 
     @FXML
     public void initialize() {
@@ -182,10 +183,25 @@ public class MainController {
     }
 
     private void loadEmailsForFolder(String folderName) {
+        // Prevent concurrent loads
+        if (isLoadingEmails) {
+            System.out.println("Already loading emails, skipping request...");
+            return;
+        }
+
         HostConfiguration config = requireHostConfig();
         if (config == null) {
             return;
         }
+
+        isLoadingEmails = true;
+
+        // Show loading indicator
+        Platform.runLater(() -> {
+            emailData.clear();
+            clearEmailDetails();
+            subjectLabel.setText("Loading emails...");
+        });
 
         new Thread(() -> {
             try {
@@ -193,12 +209,16 @@ public class MainController {
                 Platform.runLater(() -> {
                     emailData.setAll(messages);
                     clearEmailDetails();
+                    subjectLabel.setText("");
                 });
             } catch (Exception ex) {
                 ex.printStackTrace();
-                Platform.runLater(() ->
-                        showError("Error loading emails", ex.getMessage())
-                );
+                Platform.runLater(() -> {
+                    showError("Error loading emails", ex.getMessage());
+                    subjectLabel.setText("");
+                });
+            } finally {
+                isLoadingEmails = false;
             }
         }).start();
     }
